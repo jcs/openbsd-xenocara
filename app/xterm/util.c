@@ -4171,6 +4171,9 @@ allocXtermChars(ScrnPtr *buffer, Cardinal length)
 void
 xtermSizeHints(XtermWidget xw, int scrollbarWidth)
 {
+    /* XXX: ignore size restrictions, let window manager control */
+    return;
+
     TScreen *screen = TScreenOf(xw);
 
     TRACE(("xtermSizeHints\n"));
