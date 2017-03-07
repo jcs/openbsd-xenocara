@@ -138,6 +138,9 @@
 /* Use Windows sockets */
 #undef HAS_WINSOCK
 
+/* Define to 1 if you have the `arc4random_buf' function. */
+#undef HAVE_ARC4RANDOM_BUF
+
 /* Define to 1 if you have the `authdes_create' function. */
 #undef HAVE_AUTHDES_CREATE
 
@@ -223,6 +226,9 @@
 
 /* Define to 1 if you have the <libaudit.h> header file. */
 #undef HAVE_LIBAUDIT_H
+
+/* Define to 1 if you have the `bsd' library (-lbsd). */
+#undef HAVE_LIBBSD
 
 /* Define to 1 if you have the libdispatch (GCD) available */
 #undef HAVE_LIBDISPATCH
@@ -375,6 +381,9 @@
 
 /* Define to 1 if you have the <sys/vt.h> header file. */
 #undef HAVE_SYS_VT_H
+
+/* Define to 1 if you have the `timingsafe_memcmp' function. */
+#undef HAVE_TIMINGSAFE_MEMCMP
 
 /* Define to 1 if typeof works with your compiler. */
 #undef HAVE_TYPEOF
