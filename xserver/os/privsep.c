@@ -119,6 +119,7 @@ struct okdev {
 	{"/dev/drm2", O_RDWR },
 	{"/dev/drm3", O_RDWR },
 	{"/dev/amdmsr", O_RDWR | O_EXCL},
+	{"/dev/hotplug", O_RDONLY | O_NONBLOCK},
 	{NULL, 0}
 };
 

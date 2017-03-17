@@ -27,6 +27,9 @@
 
 #include <sys/ioctl.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/device.h>
+#include <sys/hotplug.h>
 #include <dev/wscons/wsconsio.h>
 #include <dev/wscons/wsksymdef.h>
 #include <errno.h>
@@ -40,6 +43,7 @@
 
 #define WSCONS_KBD_DEVICE "/dev/wskbd"
 #define WSCONS_MOUSE_PREFIX "/dev/wsmouse"
+#define HOTPLUG_DEVICE "/dev/hotplug"
 
 #define KB_OVRENC \
         { KB_UK,        "gb" }, \
@@ -79,6 +83,8 @@ struct nameint kbdmodel[] = {
     {WSKBD_TYPE_ADB, "macintosh" },
     {0}
 };
+
+int hotplugfd = -1;
 
 static void
 wscons_add_keyboard(void)
@@ -213,56 +219,127 @@ wscons_add_pointer(const char *path, const char *driver, int flags)
 }
 
 static void
+wscons_check_pointer(char *devnam)
+{
+    int fd, wsmouse_type;
+
+    LogMessageVerb(X_INFO, 10, "wsmouse: checking %s\n", devnam);
+    fd = priv_open_device(devnam);
+    if (fd == -1) {
+        LogMessageVerb(X_WARNING, 10, "%s: %s\n", devnam, strerror(errno));
+        return;
+    }
+    if (ioctl(fd, WSMOUSEIO_GTYPE, &wsmouse_type) != 0) {
+        LogMessageVerb(X_WARNING, 10,
+                       "%s: WSMOUSEIO_GTYPE failed\n", devnam);
+        close(fd);
+        return;
+    }
+    close(fd);
+    switch (wsmouse_type) {
+      case WSMOUSE_TYPE_SYNAPTICS:
+      case WSMOUSE_TYPE_ALPS:
+      case WSMOUSE_TYPE_ELANTECH:
+      case WSMOUSE_TYPE_SYNAP_SBTN:
+        wscons_add_pointer(devnam, "synaptics",
+                           ATTR_TOUCHPAD);
+        break;
+      case WSMOUSE_TYPE_TPANEL:
+        wscons_add_pointer(devnam, "ws", ATTR_TOUCHSCREEN);
+        break;
+      default:
+        break;
+    }
+}
+
+static void
 wscons_add_pointers(void)
 {
     char devnam[256];
-    int fd, i, wsmouse_type;
+    int i;
 
     /* Check pointing devices */
     for (i = 0; i < 4; i++) {
         snprintf(devnam, sizeof(devnam), "%s%d", WSCONS_MOUSE_PREFIX, i);
-        LogMessageVerb(X_INFO, 10, "wsmouse: checking %s\n", devnam);
-        fd = priv_open_device(devnam);
-        if (fd == -1) {
-            LogMessageVerb(X_WARNING, 10, "%s: %s\n", devnam, strerror(errno));
-            continue;
-        }
-        if (ioctl(fd, WSMOUSEIO_GTYPE, &wsmouse_type) != 0) {
-            LogMessageVerb(X_WARNING, 10,
-                           "%s: WSMOUSEIO_GTYPE failed\n", devnam);
-            close(fd);
-            continue;
-        }
-        close(fd);
-        switch (wsmouse_type) {
-          case WSMOUSE_TYPE_SYNAPTICS:
-          case WSMOUSE_TYPE_ALPS:
-          case WSMOUSE_TYPE_ELANTECH:
-          case WSMOUSE_TYPE_SYNAP_SBTN:
-            wscons_add_pointer(devnam, "synaptics",
-                               ATTR_TOUCHPAD);
-            break;
-          case WSMOUSE_TYPE_TPANEL:
-            wscons_add_pointer(devnam, "ws", ATTR_TOUCHSCREEN);
-            break;
-          default:
-            break;
-        }
+        wscons_check_pointer(devnam);
     }
+
     /* Add a default entry catching all other mux elements as "ws" */
     wscons_add_pointer(WSCONS_MOUSE_PREFIX, "ws", ATTR_POINTER);
+}
+
+static void
+block_handler(void *data, struct timeval **tv, void *read_mask)
+{
+}
+
+static void
+wakeup_handler(void *data, int err, void *read_mask)
+{
+    struct hotplug_event he;
+    char wsdevname[256];
+
+    if (err < 0)
+        return;
+
+    if (FD_ISSET(hotplugfd, (fd_set *)read_mask)) {
+        if (read(hotplugfd, &he, sizeof(he)) != sizeof(he))
+            return;
+
+        snprintf(wsdevname, sizeof(wsdevname), "/dev/%s", he.he_devname);
+
+        DebugF("%s: hotplug %s event for %s\n", HOTPLUG_DEVICE,
+            (he.he_type == HOTPLUG_DEVDT ? "detach" : "attach"),
+            he.he_devname);
+        ErrorF("%s: hotplug %s event for %s\n", HOTPLUG_DEVICE,
+            (he.he_type == HOTPLUG_DEVDT ? "detach" : "attach"),
+            he.he_devname);
+
+        if (strstr(wsdevname, WSCONS_MOUSE_PREFIX) != NULL) {
+            switch (he.he_type) {
+            case HOTPLUG_DEVAT:
+                wscons_check_pointer(wsdevname);
+                break;
+
+            case HOTPLUG_DEVDT:
+                snprintf(wsdevname, sizeof(wsdevname), "wscons:/dev/%s",
+                    he.he_devname);
+                remove_devices("wscons", wsdevname);
+                break;
+            }
+        }
+    }
 }
 
 int
 config_wscons_init(void)
 {
+    struct hotplug_event he;
+
     wscons_add_keyboard();
     wscons_add_pointers();
+
+    hotplugfd = priv_open_device(HOTPLUG_DEVICE);
+    if (hotplugfd == -1)
+        ErrorF("%s: config_wscons_init: %s\n", HOTPLUG_DEVICE, strerror(errno));
+    else {
+        /* clear out old events */
+        while (read(hotplugfd, &he, sizeof(he)) == sizeof(he))
+            ;
+
+        RegisterBlockAndWakeupHandlers(block_handler, wakeup_handler, NULL);
+        AddGeneralSocket(hotplugfd);
+    }
+
     return 1;
 }
 
 void
 config_wscons_fini(void)
 {
-    /* Not much to do ? */
+    if (hotplugfd != -1) {
+        RemoveBlockAndWakeupHandlers(block_handler, wakeup_handler, NULL);
+        RemoveGeneralSocket(hotplugfd);
+        hotplugfd = -1;
+    }
 }
