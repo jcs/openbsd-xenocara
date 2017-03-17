@@ -210,7 +210,8 @@ KbdOn(InputInfoPtr pInfo, int what)
             case WSCONS:
                  option = WSKBD_RAW;
                  if (ioctl(pInfo->fd, WSKBDIO_SETMODE, &option) == -1) {
-			 FatalError("can't switch keyboard to raw mode. "
+			 LogMessageVerb(X_WARNING, 10,
+			 	    "can't switch keyboard to raw mode. "
 				    "Enable support for it in the kernel\n"
 				    "or use for example:\n\n"
 				    "Option \"Protocol\" \"wskbd\"\n"
