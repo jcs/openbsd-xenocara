@@ -435,7 +435,10 @@ XftFontLoadGlyphs (Display	    *dpy,
 	/*
 	 * Embolden if required
 	 */
-	if (font->info.embolden) FT_GlyphSlot_Embolden(glyphslot);
+	if (font->info.embolden) {
+		FT_GlyphSlot_EmboldenStrength(glyphslot,
+		                              font->info.embstrength);
+	}
 
 	/*
 	 * Compute glyph metrics from FreeType information

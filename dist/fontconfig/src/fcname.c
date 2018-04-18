@@ -192,6 +192,7 @@ static const FcConstant _FcBaseConstants[] = {
     { (FcChar8 *) "scalable",	    "scalable",	    FcTrue },
     { (FcChar8 *) "minspace",	    "minspace",	    FcTrue },
     { (FcChar8 *) "embolden",	    "embolden",	    FcTrue },
+    { (FcChar8 *) "embstrength",    "embstrength",  0 },
     { (FcChar8 *) "embeddedbitmap", "embeddedbitmap",	FcTrue },
     { (FcChar8 *) "decorative",	    "decorative",   FcTrue },
     { (FcChar8 *) "lcdnone",	    "lcdfilter",    FC_LCD_NONE },

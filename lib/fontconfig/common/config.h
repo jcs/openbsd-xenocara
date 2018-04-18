@@ -26,7 +26,7 @@
 #define FC_DEFAULT_FONTS "/usr/X11R6/lib/X11/fonts"
 
 /* The type of len parameter of the gperf hash/lookup function */
-#define FC_GPERF_SIZE_T unsigned int
+#define FC_GPERF_SIZE_T size_t
 
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like `struct s { int n; double

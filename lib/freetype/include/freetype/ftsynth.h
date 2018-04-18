@@ -69,6 +69,10 @@ FT_BEGIN_HEADER
   FT_EXPORT( void )
   FT_GlyphSlot_Embolden( FT_GlyphSlot  slot );
 
+  /* Embolden a glyph by a specified value */
+  FT_EXPORT( void )
+  FT_GlyphSlot_EmboldenStrength( FT_GlyphSlot  slot,  FT_UInt  strength );
+
   /* Slant an outline glyph to the right by about 12 degrees. */
   FT_EXPORT( void )
   FT_GlyphSlot_Oblique( FT_GlyphSlot  slot );

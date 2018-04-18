@@ -134,6 +134,7 @@ struct _XftFontInfo {
     FT_F26Dot6		xsize, ysize;	/* pixel size */
     FcBool		antialias;	/* doing antialiasing */
     FcBool		embolden;	/* force emboldening */
+    int			embstrength;	/* emboldening strength */
     int			rgba;		/* subpixel order */
     int			lcd_filter;	/* lcd filter */
     FT_Matrix		matrix;		/* glyph transformation matrix */

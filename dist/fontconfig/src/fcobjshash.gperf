@@ -63,3 +63,4 @@ int id;
 "postscriptname",FC_POSTSCRIPT_NAME_OBJECT
 "color",FC_COLOR_OBJECT
 "symbol",FC_SYMBOL_OBJECT
+"embstrength",FC_EMBSTRENGTH_OBJECT

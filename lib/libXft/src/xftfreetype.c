@@ -555,6 +555,16 @@ XftFontInfoFill (Display *dpy, _Xconst FcPattern *pattern, XftFontInfo *fi)
 	goto bail1;
     }
 
+    switch (FcPatternGetInteger (pattern, FC_EMBSTRENGTH, 0, &fi->embstrength)) {
+    case FcResultNoMatch:
+	fi->embstrength = 0;
+	break;
+    case FcResultMatch:
+	break;
+    default:
+	goto bail1;
+    }
+
     switch (FcPatternGetInteger (pattern, FC_HINT_STYLE, 0, &hint_style)) {
     case FcResultNoMatch:
 	hint_style = FC_HINT_FULL;

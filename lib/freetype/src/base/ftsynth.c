@@ -87,7 +87,7 @@
   /* documentation is in ftsynth.h */
 
   FT_EXPORT_DEF( void )
-  FT_GlyphSlot_Embolden( FT_GlyphSlot  slot )
+  FT_GlyphSlot_EmboldenStrength( FT_GlyphSlot  slot, FT_UInt  strength )
   {
     FT_Library  library;
     FT_Face     face;
@@ -105,9 +105,13 @@
          slot->format != FT_GLYPH_FORMAT_BITMAP  )
       return;
 
-    /* some reasonable strength */
+    if ( strength == 0)
+      strength = 70;
+    else if ( strength > 90 )
+      strength = 90;
+
     xstr = FT_MulFix( face->units_per_EM,
-                      face->size->metrics.y_scale ) / 24;
+                      face->size->metrics.y_scale ) / (100 - strength);
     ystr = xstr;
 
     if ( slot->format == FT_GLYPH_FORMAT_OUTLINE )
@@ -157,6 +161,13 @@
     /* XXX: 16-bit overflow case must be excluded before here */
     if ( slot->format == FT_GLYPH_FORMAT_BITMAP )
       slot->bitmap_top += (FT_Int)( ystr >> 6 );
+  }
+
+
+  FT_EXPORT_DEF( void )
+  FT_GlyphSlot_Embolden( FT_GlyphSlot  slot )
+  {
+    return FT_GlyphSlot_EmboldenStrength( slot, 0 );
   }
 
 

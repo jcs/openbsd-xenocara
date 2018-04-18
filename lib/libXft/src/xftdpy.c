@@ -375,6 +375,8 @@ _XftDefaultInit (Display *dpy)
 	goto bail1;
     if (!_XftDefaultInitBool (dpy, pat, FC_EMBOLDEN))
 	goto bail1;
+    if (!_XftDefaultInitInteger (dpy, pat, FC_EMBSTRENGTH))
+	goto bail1;
     if (!_XftDefaultInitBool (dpy, pat, FC_AUTOHINT))
 	goto bail1;
     if (!_XftDefaultInitInteger (dpy, pat, FC_HINT_STYLE))
@@ -474,6 +476,12 @@ XftDefaultSubstitute (Display *dpy, int screen, FcPattern *pattern)
 	FcPatternAddBool (pattern, FC_EMBOLDEN,
 			   XftDefaultGetBool (dpy, FC_EMBOLDEN, screen,
 					      False));
+    }
+    if (FcPatternGet (pattern, FC_EMBSTRENGTH, 0, &v) == FcResultNoMatch)
+    {
+	FcPatternAddInteger (pattern, FC_EMBSTRENGTH,
+			   XftDefaultGetInteger (dpy, FC_EMBSTRENGTH,
+			                         screen, 0));
     }
     if (FcPatternGet (pattern, FC_HINTING, 0, &v) == FcResultNoMatch)
     {
