@@ -164,7 +164,7 @@ wscons_add_keyboard(void)
         }
 
  kbd_config_done:
-    attrs.flags |= ATTR_KEYBOARD;
+    attrs.flags |= ATTR_KEY | ATTR_KEYBOARD;
     rc = NewInputDeviceRequest(input_options, &attrs, &dev);
     if (rc != Success)
         goto unwind;
@@ -239,7 +239,7 @@ wscons_add_pointers(void)
           case WSMOUSE_TYPE_ALPS:
           case WSMOUSE_TYPE_ELANTECH:
           case WSMOUSE_TYPE_SYNAP_SBTN:
-            wscons_add_pointer(devnam, "synaptics",
+            wscons_add_pointer(devnam, "ws",
                                ATTR_TOUCHPAD);
             break;
           case WSMOUSE_TYPE_TPANEL:

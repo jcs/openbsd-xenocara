@@ -1,7 +1,7 @@
-/* $XTermId: trace.h,v 1.78 2016/10/05 08:56:36 tom Exp $ */
+/* $XTermId: trace.h,v 1.81 2017/11/07 00:12:24 tom Exp $ */
 
 /*
- * Copyright 1997-2015,2016 by Thomas E. Dickey
+ * Copyright 1997-2016,2017 by Thomas E. Dickey
  *
  *                         All Rights Reserved
  *
@@ -41,10 +41,16 @@
 
 #if OPT_TRACE
 
+#include <stdarg.h>
+
 extern	void	Trace ( const char *, ... ) GCC_PRINTFLIKE(1,2);
+extern	void	TraceVA ( const char *fmt, va_list ap );
 
 #undef  TRACE
 #define TRACE(p) Trace p
+
+#undef  TRACE_VA
+#define TRACE_VA(p) TraceVA p
 
 extern	void	TraceClose (void);
 
@@ -67,6 +73,8 @@ extern	const char * visibleSelectionTarget(Display * /* d */, Atom /* a */);
 extern	const char * visibleTekparse (int);
 extern	const char * visibleVTparse (int);
 extern	const char * visibleXError (int /* code */);
+
+extern	const char * TraceAtomName(Display * /* d */, Atom /* a */);
 
 extern	void	TraceArgv(const char * /* tag */, char ** /* argv */);
 #undef  TRACE_ARGV

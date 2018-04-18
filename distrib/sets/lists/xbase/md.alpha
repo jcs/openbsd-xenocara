@@ -101,11 +101,11 @@
 ./usr/X11R6/lib/libGLw.a
 ./usr/X11R6/lib/libGLw.so.6.0
 ./usr/X11R6/lib/libOSMesa.la
-./usr/X11R6/lib/libOSMesa.so.10.1
+./usr/X11R6/lib/libOSMesa.so.11.0
 ./usr/X11R6/lib/libdrm.la
-./usr/X11R6/lib/libdrm.so.7.4
+./usr/X11R6/lib/libdrm.so.7.6
 ./usr/X11R6/lib/libdrm_amdgpu.la
-./usr/X11R6/lib/libdrm_amdgpu.so.1.2
+./usr/X11R6/lib/libdrm_amdgpu.so.1.5
 ./usr/X11R6/lib/libdrm_nouveau.la
 ./usr/X11R6/lib/libdrm_nouveau.so.3.0
 ./usr/X11R6/lib/libdrm_radeon.la
@@ -113,7 +113,7 @@
 ./usr/X11R6/lib/libepoxy.a
 ./usr/X11R6/lib/libepoxy.so.2.0
 ./usr/X11R6/lib/libgbm.la
-./usr/X11R6/lib/libgbm.so.0.1
+./usr/X11R6/lib/libgbm.so.0.2
 ./usr/X11R6/lib/libglapi.la
 ./usr/X11R6/lib/libglapi.so.0.2
 ./usr/X11R6/lib/libtxc_dxtn.a
@@ -193,6 +193,7 @@
 ./usr/X11R6/man/man3/XF86VidModeValidateModeLine.3
 ./usr/X11R6/man/man3/XFree86-DGA.3
 ./usr/X11R6/share/doc/dri2proto/dri2proto.txt
+./usr/X11R6/share/libdrm/amdgpu.ids
 ./var/cache/fontconfig/0f0db7876307790c19e1f91eb9095080-le64.cache-7
 ./var/cache/fontconfig/1487dd4aecf3164c4a11193169052443-le64.cache-7
 ./var/cache/fontconfig/49aa604a5ac92994756d3008e408245c-le64.cache-7

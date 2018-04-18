@@ -16,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $OpenBSD: group.c,v 1.126 2017/02/10 15:00:54 okan Exp $
+ * $OpenBSD: group.c,v 1.128 2018/01/23 13:48:49 okan Exp $
  */
 
 #include <sys/types.h>
@@ -155,7 +155,7 @@ group_movetogroup(struct client_ctx *cc, int idx)
 	struct group_ctx	*gc;
 
 	if (idx < 0 || idx >= Conf.ngroups)
-		errx(1, "%s: index out of range (%d)", __func__, idx);
+		return;
 
 	TAILQ_FOREACH(gc, &sc->groupq, entry) {
 		if (gc->num == idx)
@@ -170,7 +170,7 @@ group_movetogroup(struct client_ctx *cc, int idx)
 }
 
 void
-group_toggle_membership_enter(struct client_ctx *cc)
+group_toggle_membership(struct client_ctx *cc)
 {
 	struct screen_ctx	*sc = cc->sc;
 	struct group_ctx	*gc = sc->group_active;
@@ -183,13 +183,6 @@ group_toggle_membership_enter(struct client_ctx *cc)
 		cc->flags |= CLIENT_GROUP;
 	}
 
-	client_draw_border(cc);
-}
-
-void
-group_toggle_membership_leave(struct client_ctx *cc)
-{
-	cc->flags &= ~CLIENT_HIGHLIGHT;
 	client_draw_border(cc);
 }
 
@@ -223,7 +216,7 @@ group_hidetoggle(struct screen_ctx *sc, int idx)
 	struct group_ctx	*gc;
 
 	if (idx < 0 || idx >= Conf.ngroups)
-		errx(1, "%s: index out of range (%d)", __func__, idx);
+		return;
 
 	TAILQ_FOREACH(gc, &sc->groupq, entry) {
 		if (gc->num == idx)
@@ -246,7 +239,7 @@ group_only(struct screen_ctx *sc, int idx)
 	struct group_ctx	*gc;
 
 	if (idx < 0 || idx >= Conf.ngroups)
-		errx(1, "%s: index out of range (%d)", __func__, idx);
+		return;
 
 	TAILQ_FOREACH(gc, &sc->groupq, entry) {
 		if (gc->num == idx)

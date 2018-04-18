@@ -1,7 +1,7 @@
-/* $XTermId: trace.c,v 1.166 2016/10/05 09:16:01 tom Exp $ */
+/* $XTermId: trace.c,v 1.172 2017/11/07 00:12:24 tom Exp $ */
 
 /*
- * Copyright 1997-2015,2016 by Thomas E. Dickey
+ * Copyright 1997-2016,2017 by Thomas E. Dickey
  *
  *                         All Rights Reserved
  *
@@ -48,7 +48,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <assert.h>
 
 #include <X11/Xatom.h>
@@ -74,11 +73,10 @@ const char *trace_who = "parent";
 
 static FILE *trace_fp;
 
-void
-Trace(const char *fmt,...)
+static FILE *
+TraceOpen(void)
 {
     static const char *trace_out;
-    va_list ap;
 
     if (trace_fp != 0
 	&& trace_who != trace_out) {
@@ -88,7 +86,7 @@ Trace(const char *fmt,...)
     trace_out = trace_who;
 
     if (!trace_fp) {
-	unsigned oldmask = (unsigned) umask(077);
+	mode_t oldmask = umask(077);
 	char name[BUFSIZ];
 #if 0				/* usually I do not want unique names */
 	int unique;
@@ -129,11 +127,28 @@ Trace(const char *fmt,...)
 	}
 	(void) umask(oldmask);
     }
+    return trace_fp;
+}
+
+void
+Trace(const char *fmt,...)
+{
+    va_list ap;
+    FILE *fp = TraceOpen();
 
     va_start(ap, fmt);
-    vfprintf(trace_fp, fmt, ap);
-    (void) fflush(trace_fp);
+    vfprintf(fp, fmt, ap);
+    (void) fflush(fp);
     va_end(ap);
+}
+
+void
+TraceVA(const char *fmt, va_list ap)
+{
+    FILE *fp = TraceOpen();
+
+    vfprintf(fp, fmt, ap);
+    (void) fflush(fp);
 }
 
 void
@@ -576,6 +591,15 @@ LineTstFlag(LineData ld, int flag)
 }
 #endif /* OPT_TRACE_FLAGS */
 
+const char *
+TraceAtomName(Display *dpy, Atom atom)
+{
+    static char *result;
+    free(result);
+    result = XGetAtomName(dpy, atom);
+    return result;
+}
+
 /*
  * Trace the normal or alternate screen, showing color values up to 16, e.g.,
  * for debugging with vttest.
@@ -943,6 +967,9 @@ TraceXtermResources(void)
     XRES_B(ptyHandshake);
     XRES_B(ptySttySize);
 #endif
+#if OPT_REPORT_CCLASS
+    XRES_B(reportCClass);
+#endif
 #if OPT_REPORT_COLORS
     XRES_B(reportColors);
 #endif
@@ -967,11 +994,13 @@ TraceXtermResources(void)
 void
 TraceArgv(const char *tag, char **argv)
 {
-    int n = 0;
-
     TRACE(("%s:\n", tag));
-    while (*argv != 0) {
-	TRACE(("  %d:%s\n", n++, *argv++));
+    if (argv != 0) {
+	int n = 0;
+
+	while (*argv != 0) {
+	    TRACE(("  %d:%s\n", n++, *argv++));
+	}
     }
 }
 

@@ -45,7 +45,7 @@
 #include "xf86sbusBus.h"
 #endif
 
-#ifdef sun
+#ifdef __sun
 #include <sys/visual_io.h>
 #include <ctype.h>
 #endif
@@ -149,6 +149,15 @@ xf86AutoConfig(void)
     char buf[1024];
     ConfigStatus ret;
 
+    /* Make sure config rec is there */
+    if (xf86allocateConfig() != NULL) {
+        ret = CONFIG_OK;    /* OK so far */
+    }
+    else {
+        xf86Msg(X_ERROR, "Couldn't allocate Config record.\n");
+        return FALSE;
+    }
+
     listPossibleVideoDrivers(deviceList, 20);
 
     for (p = deviceList; *p; p++) {
@@ -189,6 +198,51 @@ xf86AutoConfig(void)
     return ret == CONFIG_OK;
 }
 
+#ifdef __OpenBSD__
+
+static void
+listPossibleVideoDrivers(char *matches[], int nmatches)
+{
+    int fd = xf86Info.consoleFd;
+    u_int gtype;
+    int i;
+
+    for (i = 0; i < nmatches; i++) {
+        matches[i] = NULL;
+    }
+    i = 0;
+
+    if (ioctl(fd, WSDISPLAYIO_GTYPE, &gtype) == -1)
+        return;
+
+    switch (gtype) {
+#ifdef XSERVER_LIBPCIACCESS
+    case WSDISPLAY_TYPE_PCIVGA:
+    case WSDISPLAY_TYPE_MACHFB:
+    case WSDISPLAY_TYPE_INTELDRM:
+    case WSDISPLAY_TYPE_RADEONDRM:
+        i = xf86PciMatchDriver(matches, nmatches);
+        break;
+#endif
+    case WSDISPLAY_TYPE_IFB:
+        matches[i++] = xnfstrdup("wildcatfb");
+        break;
+    case WSDISPLAY_TYPE_SUNFFB:
+        matches[i++] = xnfstrdup("sunffb");
+        break;
+    default:
+        matches[i++] = xnfstrdup("wsfb");
+        break;
+    }
+
+#if defined(__i386__) || defined(__amd64__)
+    if (gtype == WSDISPLAY_TYPE_PCIVGA && i < (nmatches - 1))
+        matches[i++] = xnfstrdup("vesa");
+#endif
+}
+
+#else
+
 static void
 listPossibleVideoDrivers(char *matches[], int nmatches)
 {
@@ -202,7 +256,7 @@ listPossibleVideoDrivers(char *matches[], int nmatches)
 #ifdef XSERVER_PLATFORM_BUS
     i = xf86PlatformMatchDriver(matches, nmatches);
 #endif
-#ifdef sun
+#ifdef __sun
     /* Check for driver type based on /dev/fb type and if valid, use
        it instead of PCI bus probe results */
     if (xf86Info.consoleFd >= 0 && (i < (nmatches - 1))) {
@@ -271,7 +325,7 @@ listPossibleVideoDrivers(char *matches[], int nmatches)
     matches[i++] = xnfstrdup("modesetting");
 #endif
 
-#if !defined(sun)
+#if !defined(__sun)
     /* Fallback to platform default frame buffer driver */
     if (i < (nmatches - 1)) {
 #if defined(__OpenBSD__)
@@ -286,7 +340,7 @@ listPossibleVideoDrivers(char *matches[], int nmatches)
         matches[i++] = xnfstrdup("fbdev");
 #endif
     }
-#endif                          /* !sun */
+#endif                          /* !__sun */
 
     /* Fallback to platform default hardware */
     if (i < (nmatches - 1)) {
@@ -297,6 +351,8 @@ listPossibleVideoDrivers(char *matches[], int nmatches)
 #endif
     }
 }
+
+#endif
 
 /* copy a screen section and enter the desired driver
  * and insert it at i in the list of screens */

@@ -1,4 +1,4 @@
-.\"	$OpenBSD: cwm.1,v 1.57 2016/12/01 18:17:52 okan Exp $
+.\"	$OpenBSD: cwm.1,v 1.62 2018/02/04 22:56:26 okan Exp $
 .\"
 .\" Copyright (c) 2004,2005 Marius Aamodt Eriksen <marius@monkey.org>
 .\"
@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: December 1 2016 $
+.Dd $Mdocdate: February 4 2018 $
 .Dt CWM 1
 .Os
 .Sh NAME
@@ -23,6 +23,7 @@
 .Sh SYNOPSIS
 .\" For a program:  program [-abc] file ...
 .Nm cwm
+.Op Fl v
 .Op Fl c Ar file
 .Op Fl d Ar display
 .Sh DESCRIPTION
@@ -47,6 +48,11 @@ however,
 will continue to process the rest of the configuration file.
 .It Fl d Ar display
 Specify the display to use.
+.It Fl v
+Verbose mode.
+Multiple
+.Fl v
+options increase the verbosity.
 .El
 .Pp
 .Nm
@@ -83,9 +89,9 @@ Hide current window.
 Lower current window.
 .It Ic M-Up
 Raise current window.
-.It Ic M-/
+.It Ic M-slash
 Search for windows.
-.It Ic C-/
+.It Ic C-slash
 Search for applications.
 .It Ic CM-n
 Label current window.
@@ -113,9 +119,9 @@ Toggle stickiness of current window.
 Toggle full-screen mode of current window.
 .It Ic CM-m
 Toggle maximization of current window.
-.It Ic CM-=
+.It Ic CM-equal
 Toggle vertical maximization of current window.
-.It Ic CMS-=
+.It Ic CMS-equal
 Toggle horizontal maximization of current window.
 .It Ic M-[hjkl]
 Move window by a small amount.
@@ -127,11 +133,11 @@ Resize window by a small amount.
 .It Ic CMS-[hjkl]
 Resize window by a large amount; see
 .Xr cwmrc 5 .
-.It Ic M-?
+.It Ic M-question
 Spawn
 .Dq exec program
 dialog.
-.It Ic M-.
+.It Ic M-period
 Spawn
 .Dq ssh to
 dialog.
@@ -143,7 +149,7 @@ will be executed via the configured terminal emulator.
 .It Ic CM-w
 Spawn
 .Dq exec WindowManager
-dialog, allowing a switch to another window manager.
+menu, allowing a switch to another window manager.
 .It Ic CMS-r
 Restart.
 .It Ic CMS-q
@@ -184,6 +190,14 @@ List all available items.
 .It Ic [Esc]
 Cancel.
 .El
+.Pp
+.Nm
+rereads its configuration file when it receives a hangup signal,
+.Dv SIGHUP ,
+by executing itself with the name and arguments with which it was started.
+This is equivalent to the
+.Ar restart
+function.
 .Sh SEARCH
 .Nm
 features the ability to search for windows by their current title,

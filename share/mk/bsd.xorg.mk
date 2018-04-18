@@ -1,4 +1,4 @@
-# $OpenBSD: bsd.xorg.mk,v 1.58 2017/02/12 18:19:54 matthieu Exp $ -*- makefile  -*-
+# $OpenBSD: bsd.xorg.mk,v 1.61 2017/07/02 09:53:05 espie Exp $ -*- makefile  -*-
 #
 # Copyright © 2006,2012 Matthieu Herrb
 #
@@ -56,7 +56,11 @@ XENOCARA_PATH?=	/bin:/sbin:/usr/bin:/usr/sbin:/usr/X11R6/bin
 
 CONFIGURE_ENV=	PKG_CONFIG_LIBDIR="$(PKG_CONFIG_LIBDIR)" \
 		CONFIG_SITE=$(CONFIG_SITE) \
+		CC="$(CC)" \
 		CFLAGS="$(CFLAGS:C/ *$//)" \
+		CXX="$(CXX)" \
+		CXXFLAGS="$(CXXFLAGS:C/ *$//)" \
+		AR_FLAGS="cruD" \
 		MAKE="${MAKE}"
 
 CONFIGURE_ARGS+= --disable-silent-rules
@@ -188,7 +192,6 @@ build:
 build:
 	cd ${.CURDIR} && \
 	    su ${BUILDUSER} -c 'exec ${MAKE} ${MAKE_FLAGS} ${_wrapper} cleandir' && \
-	    su ${BUILDUSER} -c 'exec ${MAKE} ${MAKE_FLAGS} ${_wrapper} depend' && \
 	    su ${BUILDUSER} -c 'exec ${MAKE} ${MAKE_FLAGS} ${_wrapper} all' && \
 	    exec ${MAKE} ${MAKE_FLAGS} ${_wrapper} install
 .endif

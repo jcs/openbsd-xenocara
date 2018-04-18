@@ -1,9 +1,10 @@
-#	$OpenBSD: Makefile,v 1.47 2017/01/13 11:19:58 dcoppa Exp $
+#	$OpenBSD: Makefile,v 1.50 2017/12/15 19:29:11 dcoppa Exp $
 
 FREETYPESRC=	${.CURDIR}/src
 
 # Get it from builds/unix/configure.ac
-FT_VERSION_INFO= 19.0.13
+FT_VERSION_INFO= 21.0.15
+
 INSTALL_PROGRAM = ${INSTALL} ${INSTALL_COPY} -m 755 -o $(BINOWN) -g $(BINGRP)
 
 .ifmake includes
@@ -30,6 +31,7 @@ CLEANFILES+=	freetype-config freetype2.pc
 obj:	_xenocara_obj
 
 beforedepend:	freetype-config freetype2.pc
+BUILDFIRST =	freetype-config freetype2.pc
 
 beforeinstall:
 	cd ${.CURDIR} ; exec ${MAKE} ${MAKE_FLAGS} includes

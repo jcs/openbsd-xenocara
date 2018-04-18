@@ -325,6 +325,7 @@ infodir = @infodir@
 install_sh = @install_sh@
 kernel_source = @kernel_source@
 libdir = @libdir@
+libdrmdatadir = @libdrmdatadir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
@@ -395,9 +396,7 @@ EXTRA_DIST = \
 	tests/test-batch.sh \
 	$(TESTS)
 
-test_decode_LDADD = libdrm_intel.la ../libdrm.la \
-	-lpthread
-
+test_decode_LDADD = libdrm_intel.la ../libdrm.la
 pkgconfig_DATA = libdrm_intel.pc
 all: all-am
 

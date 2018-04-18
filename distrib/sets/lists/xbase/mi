@@ -115,10 +115,10 @@
 ./usr/X11R6/bin/xcompmgr
 ./usr/X11R6/bin/xconsole
 ./usr/X11R6/bin/xcutsel
-./usr/X11R6/bin/xenodm
 ./usr/X11R6/bin/xdpr
 ./usr/X11R6/bin/xdpyinfo
 ./usr/X11R6/bin/xedit
+./usr/X11R6/bin/xenodm
 ./usr/X11R6/bin/xev
 ./usr/X11R6/bin/xeyes
 ./usr/X11R6/bin/xfd
@@ -233,7 +233,7 @@
 ./usr/X11R6/lib/libX11.so.16.1
 ./usr/X11R6/lib/libXRes.a
 ./usr/X11R6/lib/libXRes.la
-./usr/X11R6/lib/libXRes.so.5.0
+./usr/X11R6/lib/libXRes.so.5.1
 ./usr/X11R6/lib/libXau.a
 ./usr/X11R6/lib/libXau.la
 ./usr/X11R6/lib/libXau.so.10.0
@@ -260,9 +260,9 @@
 ./usr/X11R6/lib/libXfixes.a
 ./usr/X11R6/lib/libXfixes.la
 ./usr/X11R6/lib/libXfixes.so.6.0
-./usr/X11R6/lib/libXfont.a
-./usr/X11R6/lib/libXfont.la
-./usr/X11R6/lib/libXfont.so.13.0
+./usr/X11R6/lib/libXfont2.a
+./usr/X11R6/lib/libXfont2.la
+./usr/X11R6/lib/libXfont2.so.0.0
 ./usr/X11R6/lib/libXfontcache.a
 ./usr/X11R6/lib/libXfontcache.la
 ./usr/X11R6/lib/libXfontcache.so.5.0
@@ -327,15 +327,13 @@
 ./usr/X11R6/lib/libfontenc.la
 ./usr/X11R6/lib/libfontenc.so.4.0
 ./usr/X11R6/lib/libfreetype.a
-./usr/X11R6/lib/libfreetype.so.28.0
+./usr/X11R6/lib/libfreetype.so.28.2
 ./usr/X11R6/lib/libpciaccess.a
 ./usr/X11R6/lib/libpciaccess.la
 ./usr/X11R6/lib/libpciaccess.so.2.0
 ./usr/X11R6/lib/libpixman-1.a
 ./usr/X11R6/lib/libpixman-1.la
 ./usr/X11R6/lib/libpixman-1.so.32.6
-./usr/X11R6/lib/libpthread-stubs.a
-./usr/X11R6/lib/libpthread-stubs.so.2.0
 ./usr/X11R6/lib/libxcb-composite.a
 ./usr/X11R6/lib/libxcb-composite.so.1.0
 ./usr/X11R6/lib/libxcb-cursor.a
@@ -420,7 +418,6 @@
 ./usr/X11R6/lib/locate/xorg.db
 ./usr/X11R6/lib/pkgconfig/pixman-1.pc
 ./usr/X11R6/lib/pkgconfig/presentproto.pc
-./usr/X11R6/lib/pkgconfig/pthread-stubs.pc
 ./usr/X11R6/lib/pkgconfig/x11-xcb.pc
 ./usr/X11R6/lib/pkgconfig/xcb-atom.pc
 ./usr/X11R6/lib/pkgconfig/xcb-aux.pc
@@ -507,6 +504,7 @@
 ./usr/X11R6/share/X11/app-defaults/Xmessage
 ./usr/X11R6/share/X11/app-defaults/Xmessage-color
 ./usr/X11R6/share/X11/app-defaults/Xvidtune
+./usr/X11R6/share/libdrm
 ./usr/X11R6/share/xcb
 ./usr/X11R6/share/xcb/xcb.xsd
 ./usr/X11R6/share/xcb/xkb.xml

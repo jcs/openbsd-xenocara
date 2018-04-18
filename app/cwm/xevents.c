@@ -15,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $OpenBSD: xevents.c,v 1.126 2016/10/18 17:03:30 okan Exp $
+ * $OpenBSD: xevents.c,v 1.134 2018/02/04 22:56:26 okan Exp $
  */
 
 /*
@@ -77,6 +77,8 @@ xev_handle_maprequest(XEvent *ee)
 	XMapRequestEvent	*e = &ee->xmaprequest;
 	struct client_ctx	*cc = NULL, *old_cc;
 
+	LOG_DEBUG3("window: 0x%lx", e->window);
+
 	if ((old_cc = client_current()) != NULL)
 		client_ptrsave(old_cc);
 
@@ -92,6 +94,8 @@ xev_handle_unmapnotify(XEvent *ee)
 {
 	XUnmapEvent		*e = &ee->xunmap;
 	struct client_ctx	*cc;
+
+	LOG_DEBUG3("window: 0x%lx", e->window);
 
 	if ((cc = client_find(e->window)) != NULL) {
 		if (e->send_event) {
@@ -109,6 +113,8 @@ xev_handle_destroynotify(XEvent *ee)
 	XDestroyWindowEvent	*e = &ee->xdestroywindow;
 	struct client_ctx	*cc;
 
+	LOG_DEBUG3("window: 0x%lx", e->window);
+
 	if ((cc = client_find(e->window)) != NULL)
 		client_delete(cc);
 }
@@ -120,6 +126,8 @@ xev_handle_configurerequest(XEvent *ee)
 	struct client_ctx	*cc;
 	struct screen_ctx	*sc;
 	XWindowChanges		 wc;
+
+	LOG_DEBUG3("window: 0x%lx", e->window);
 
 	if ((cc = client_find(e->window)) != NULL) {
 		sc = cc->sc;
@@ -174,6 +182,8 @@ xev_handle_propertynotify(XEvent *ee)
 	struct screen_ctx	*sc;
 	struct client_ctx	*cc;
 
+	LOG_DEBUG3("window: 0x%lx", e->window);
+
 	if ((cc = client_find(e->window)) != NULL) {
 		switch (e->atom) {
 		case XA_WM_NORMAL_HINTS:
@@ -209,13 +219,14 @@ xev_handle_enternotify(XEvent *ee)
 	XCrossingEvent		*e = &ee->xcrossing;
 	struct client_ctx	*cc;
 
+	LOG_DEBUG3("window: 0x%lx", e->window);
+
 	Last_Event_Time = e->time;
 
 	if ((cc = client_find(e->window)) != NULL)
 		client_setactive(cc);
 }
 
-/* We can split this into two event handlers. */
 static void
 xev_handle_buttonpress(XEvent *ee)
 {
@@ -223,6 +234,8 @@ xev_handle_buttonpress(XEvent *ee)
 	struct client_ctx	*cc;
 	struct screen_ctx	*sc;
 	struct bind_ctx		*mb;
+
+	LOG_DEBUG3("window: 0x%lx", e->window);
 
 	e->state &= ~IGNOREMODMASK;
 
@@ -233,22 +246,23 @@ xev_handle_buttonpress(XEvent *ee)
 
 	if (mb == NULL)
 		return;
+	mb->cargs->xev = CWM_XEV_BTN;
 	switch (mb->context) {
 	case CWM_CONTEXT_CC:
 		if (((cc = client_find(e->window)) == NULL) &&
 		    (cc = client_current()) == NULL)
 			return;
-		(*mb->callback)(cc, &mb->argument, CWM_XEV_BTN);
+		(*mb->callback)(cc, mb->cargs);
 		break;
 	case CWM_CONTEXT_SC:
 		if (e->window != e->root)
 			return;
 		if ((sc = screen_find(e->window)) == NULL)
 			return;
-		(*mb->callback)(sc, &mb->argument, CWM_XEV_BTN);
+		(*mb->callback)(sc, mb->cargs);
 		break;
 	case CWM_CONTEXT_NONE:
-		(*mb->callback)(NULL, &mb->argument, CWM_XEV_BTN);
+		(*mb->callback)(NULL, mb->cargs);
 		break;
 	}
 }
@@ -259,9 +273,13 @@ xev_handle_buttonrelease(XEvent *ee)
 	XButtonEvent		*e = &ee->xbutton;
 	struct client_ctx	*cc;
 
+	LOG_DEBUG3("window: 0x%lx", ee->xbutton.window);
+
 	if ((cc = client_find(e->window)) != NULL) {
-		if (cc->flags & CLIENT_ACTIVE)
-			group_toggle_membership_leave(cc);
+		if (cc->flags & (CLIENT_ACTIVE | CLIENT_HIGHLIGHT)) {
+			cc->flags &= ~CLIENT_HIGHLIGHT;
+			client_draw_border(cc);
+		}
 	}
 }
 
@@ -274,6 +292,8 @@ xev_handle_keypress(XEvent *ee)
 	struct bind_ctx		*kb;
 	KeySym			 keysym, skeysym;
 	unsigned int		 modshift;
+
+	LOG_DEBUG3("window: 0x%lx", e->window);
 
 	keysym = XkbKeycodeToKeysym(X_Dpy, e->keycode, 0, 0);
 	skeysym = XkbKeycodeToKeysym(X_Dpy, e->keycode, 0, 1);
@@ -295,20 +315,21 @@ xev_handle_keypress(XEvent *ee)
 
 	if (kb == NULL)
 		return;
+	kb->cargs->xev = CWM_XEV_KEY;
 	switch (kb->context) {
 	case CWM_CONTEXT_CC:
 		if (((cc = client_find(e->window)) == NULL) &&
 		    (cc = client_current()) == NULL)
 			return;
-		(*kb->callback)(cc, &kb->argument, CWM_XEV_KEY);
+		(*kb->callback)(cc, kb->cargs);
 		break;
 	case CWM_CONTEXT_SC:
 		if ((sc = screen_find(e->window)) == NULL)
 			return;
-		(*kb->callback)(sc, &kb->argument, CWM_XEV_KEY);
+		(*kb->callback)(sc, kb->cargs);
 		break;
 	case CWM_CONTEXT_NONE:
-		(*kb->callback)(NULL, &kb->argument, CWM_XEV_KEY);
+		(*kb->callback)(NULL, kb->cargs);
 		break;
 	}
 }
@@ -321,8 +342,11 @@ xev_handle_keyrelease(XEvent *ee)
 {
 	XKeyEvent		*e = &ee->xkey;
 	struct screen_ctx	*sc;
+	struct client_ctx	*cc;
 	KeySym			 keysym;
 	unsigned int		 i;
+
+	LOG_DEBUG3("window: 0x%lx", e->window);
 
 	if ((sc = screen_find(e->root)) == NULL)
 		return;
@@ -330,7 +354,17 @@ xev_handle_keyrelease(XEvent *ee)
 	keysym = XkbKeycodeToKeysym(X_Dpy, e->keycode, 0, 0);
 	for (i = 0; i < nitems(modkeys); i++) {
 		if (keysym == modkeys[i]) {
-			client_cycle_leave(sc);
+			if ((cc = client_current()) != NULL) {
+				if (sc->cycling) {
+					sc->cycling = 0;
+					client_mtf(cc);
+				}
+				if (cc->flags & CLIENT_HIGHLIGHT) {
+					cc->flags &= ~CLIENT_HIGHLIGHT;
+					client_draw_border(cc);
+				}
+			}
+			XUngrabKeyboard(X_Dpy, CurrentTime);
 			break;
 		}
 	}
@@ -342,6 +376,8 @@ xev_handle_clientmessage(XEvent *ee)
 	XClientMessageEvent	*e = &ee->xclient;
 	struct client_ctx	*cc, *old_cc;
 	struct screen_ctx       *sc;
+
+	LOG_DEBUG3("window: 0x%lx", e->window);
 
 	if (e->message_type == cwmh[WM_CHANGE_STATE]) {
 		if ((cc = client_find(e->window)) != NULL) {
@@ -356,10 +392,7 @@ xev_handle_clientmessage(XEvent *ee)
 		if ((cc = client_find(e->window)) != NULL) {
 			if ((old_cc = client_current()) != NULL)
 				client_ptrsave(old_cc);
-			if (cc->flags & CLIENT_HIDDEN)
-				client_unhide(cc);
-			else
-				client_raise(cc);
+			client_show(cc);
 			client_ptrwarp(cc);
 		}
 	} else if (e->message_type == ewmh[_NET_WM_DESKTOP]) {
@@ -393,6 +426,8 @@ xev_handle_randr(XEvent *ee)
 	struct screen_ctx		*sc;
 	int				 i;
 
+	LOG_DEBUG3("new size: %d/%d", rev->width, rev->height);
+
 	i = XRRRootToScreen(X_Dpy, rev->root);
 	TAILQ_FOREACH(sc, &Screenq, entry) {
 		if (sc->which == i) {
@@ -413,6 +448,8 @@ xev_handle_mappingnotify(XEvent *ee)
 	XMappingEvent		*e = &ee->xmapping;
 	struct screen_ctx	*sc;
 
+	LOG_DEBUG3("window: 0x%lx", e->window);
+
 	XRefreshKeyboardMapping(e);
 	if (e->request == MappingKeyboard) {
 		TAILQ_FOREACH(sc, &Screenq, entry)
@@ -426,6 +463,8 @@ xev_handle_expose(XEvent *ee)
 	XExposeEvent		*e = &ee->xexpose;
 	struct client_ctx	*cc;
 
+	LOG_DEBUG3("window: 0x%lx", e->window);
+
 	if ((cc = client_find(e->window)) != NULL && e->count == 0)
 		client_draw_border(cc);
 }
@@ -435,9 +474,11 @@ xev_process(void)
 {
 	XEvent		 e;
 
-	XNextEvent(X_Dpy, &e);
-	if (e.type - Conf.xrandr_event_base == RRScreenChangeNotify)
-		xev_handle_randr(&e);
-	else if (e.type < LASTEvent && xev_handlers[e.type] != NULL)
-		(*xev_handlers[e.type])(&e);
+	while (XPending(X_Dpy)) {
+		XNextEvent(X_Dpy, &e);
+		if (e.type - Conf.xrandr_event_base == RRScreenChangeNotify)
+			xev_handle_randr(&e);
+		else if (e.type < LASTEvent && xev_handlers[e.type] != NULL)
+			(*xev_handlers[e.type])(&e);
+	}
 }

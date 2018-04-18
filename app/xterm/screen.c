@@ -1,7 +1,7 @@
-/* $XTermId: screen.c,v 1.512 2015/03/22 14:47:02 tom Exp $ */
+/* $XTermId: screen.c,v 1.521 2017/12/19 23:48:26 tom Exp $ */
 
 /*
- * Copyright 1999-2014,2015 by Thomas E. Dickey
+ * Copyright 1999-2015,2017 by Thomas E. Dickey
  *
  *                         All Rights Reserved
  *
@@ -710,6 +710,8 @@ ChangeToWide(XtermWidget xw)
 void
 CopyCells(TScreen *screen, LineData *src, LineData *dst, int col, int len)
 {
+    (void) screen;
+
     if (len > 0) {
 	int n;
 	int last = col + len;
@@ -826,7 +828,7 @@ void
 ScrnWriteText(XtermWidget xw,
 	      IChar *str,
 	      unsigned flags,
-	      unsigned cur_fg_bg,
+	      CellColor cur_fg_bg,
 	      unsigned length)
 {
     TScreen *screen = TScreenOf(xw);
@@ -934,7 +936,7 @@ ScrnWriteText(XtermWidget xw,
     if_OPT_ISO_COLORS(screen, {
 	unsigned j;
 	for (j = 0; j < real_width; ++j)
-	    ld->color[screen->cur_col + (int) j] = (CellColor) cur_fg_bg;
+	    ld->color[screen->cur_col + (int) j] = cur_fg_bg;
     });
 
 #if OPT_WIDE_CHARS
@@ -1387,13 +1389,11 @@ ShowWrapMarks(XtermWidget xw, int row, CLineData *ld)
 static unsigned
 refreshFontGCs(XtermWidget xw, unsigned new_attrs, unsigned old_attrs)
 {
-    TScreen *screen = TScreenOf(xw);
-
     if ((new_attrs & ATR_ITALIC) && !(old_attrs & ATR_ITALIC)) {
 	xtermLoadItalics(xw);
-	xtermUpdateFontGCs(xw, screen->ifnts);
+	xtermUpdateFontGCs(xw, True);
     } else if (!(new_attrs & ATR_ITALIC) && (old_attrs & ATR_ITALIC)) {
-	xtermUpdateFontGCs(xw, screen->fnts);
+	xtermUpdateFontGCs(xw, False);
     }
     return new_attrs;
 }
@@ -1445,7 +1445,7 @@ ScrnRefresh(XtermWidget xw,
     for (row = toprow; row <= maxrow; y += FontHeight(screen), row++) {
 #if OPT_ISO_COLORS
 	CellColor *fb = 0;
-#define ColorOf(col) (CellColor) (fb ? fb[col] : 0)
+#define ColorOf(col) (fb ? fb[col] : initCColor)
 #endif
 #if OPT_WIDE_CHARS
 	int wideness = 0;
@@ -1459,8 +1459,8 @@ ScrnRefresh(XtermWidget xw,
 	int lastind;
 	unsigned flags;
 	unsigned test;
-	CellColor fg_bg = 0;
-	unsigned fg = 0, bg = 0;
+	CellColor fg_bg = initCColor;
+	Pixel fg = 0, bg = 0;
 	int x;
 	GC gc;
 	Bool hilite;
@@ -1777,14 +1777,8 @@ ScrnRefresh(XtermWidget xw,
 
 #if defined(__CYGWIN__) && defined(TIOCSWINSZ)
     if (first_time == 1) {
-	TTYSIZE_STRUCT ts;
-
 	first_time = 0;
-	TTYSIZE_ROWS(ts) = nrows;
-	TTYSIZE_COLS(ts) = ncols;
-	ts.ws_xpixel = xw->core.width;
-	ts.ws_ypixel = xw->core.height;
-	SET_TTYSIZE(screen->respond, ts);
+	update_winsize(screen->respond, nrows, ncols, xw->core.height, xw->core.width);
     }
 #endif
     recurse--;
@@ -1868,12 +1862,9 @@ ScreenResize(XtermWidget xw,
 	     unsigned *flags)
 {
     TScreen *screen = TScreenOf(xw);
-    int code, rows, cols;
+    int rows, cols;
     const int border = 2 * screen->border;
     int move_down_by = 0;
-#ifdef TTYSIZE_STRUCT
-    TTYSIZE_STRUCT ts;
-#endif
 
     TRACE(("ScreenResize %dx%d border %d font %dx%d\n",
 	   height, width, border,
@@ -2242,16 +2233,7 @@ ScreenResize(XtermWidget xw,
 #endif /* NO_ACTIVE_ICON */
 
 #ifdef TTYSIZE_STRUCT
-    /* Set tty's idea of window size */
-    TTYSIZE_ROWS(ts) = (ttySize_t) rows;
-    TTYSIZE_COLS(ts) = (ttySize_t) cols;
-#ifdef USE_STRUCT_WINSIZE
-    ts.ws_xpixel = (ttySize_t) width;
-    ts.ws_ypixel = (ttySize_t) height;
-#endif
-    code = SET_TTYSIZE(screen->respond, ts);
-    TRACE(("return %d from SET_TTYSIZE %dx%d\n", code, rows, cols));
-    (void) code;
+    update_winsize(screen->respond, rows, cols, height, width);
 
 #if defined(SIGWINCH) && defined(TIOCGPGRP)
     if (screen->pid > 1) {
@@ -2422,13 +2404,11 @@ ScrnFillRectangle(XtermWidget xw,
 		}
 		temp = attrs | (temp & (FG_COLOR | BG_COLOR)) | CHARDRAWN;
 		ld->attribs[col] = (IAttr) temp;
-#if OPT_ISO_COLORS
-		if (attrs & (FG_COLOR | BG_COLOR)) {
-		    if_OPT_ISO_COLORS(screen, {
+		if_OPT_ISO_COLORS(screen, {
+		    if (attrs & (FG_COLOR | BG_COLOR)) {
 			ld->color[col] = xtermColorPair(xw);
-		    });
-		}
-#endif
+		    }
+		});
 	    }
 
 	    for (col = (int) left; col < target->right; ++col)

@@ -225,6 +225,7 @@
 ./usr/X11R6/include/xorg/xorg-server.h
 ./usr/X11R6/include/xorg/xorgVersion.h
 ./usr/X11R6/include/xorg/xserver-properties.h
+./usr/X11R6/include/xorg/xserver_poll.h
 ./usr/X11R6/include/xorg/xvdix.h
 ./usr/X11R6/include/xorg/xvmcext.h
 ./usr/X11R6/lib/libEGL.la
@@ -241,13 +242,13 @@
 ./usr/X11R6/lib/libGLw.a
 ./usr/X11R6/lib/libGLw.so.6.0
 ./usr/X11R6/lib/libOSMesa.la
-./usr/X11R6/lib/libOSMesa.so.10.1
+./usr/X11R6/lib/libOSMesa.so.11.0
 ./usr/X11R6/lib/libdrm.la
-./usr/X11R6/lib/libdrm.so.7.4
+./usr/X11R6/lib/libdrm.so.7.6
 ./usr/X11R6/lib/libepoxy.a
 ./usr/X11R6/lib/libepoxy.so.2.0
 ./usr/X11R6/lib/libgbm.la
-./usr/X11R6/lib/libgbm.so.0.1
+./usr/X11R6/lib/libgbm.so.0.2
 ./usr/X11R6/lib/libglapi.la
 ./usr/X11R6/lib/libglapi.so.0.2
 ./usr/X11R6/lib/libtxc_dxtn.a
@@ -268,6 +269,7 @@
 ./usr/X11R6/man/man1/glxgears.1
 ./usr/X11R6/man/man1/glxinfo.1
 ./usr/X11R6/share/doc/dri2proto/dri2proto.txt
+./usr/X11R6/share/libdrm/amdgpu.ids
 ./var/cache/fontconfig/0fe0af1d5898cfe43064332244d1dc15-be32d8.cache-7
 ./var/cache/fontconfig/1bd20f0f0c9d7d1d5fd55b69fcc2b3a3-be32d8.cache-7
 ./var/cache/fontconfig/2cee944125173ffd13126fb55c9a0dc1-be32d8.cache-7

@@ -1,4 +1,4 @@
-/*	$OpenBSD: parse.y,v 1.67 2016/12/01 17:17:27 okan Exp $ */
+/*	$OpenBSD: parse.y,v 1.71 2018/02/19 19:29:42 anton Exp $ */
 
 /*
  * Copyright (c) 2002, 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -43,7 +43,7 @@ static struct file {
 	int			 lineno;
 	int			 errors;
 } *file, *topfile;
-struct file	*pushfile(const char *);
+struct file	*pushfile(const char *, FILE *);
 int		 popfile(void);
 int		 yyparse(void);
 int		 yylex(void);
@@ -70,7 +70,7 @@ typedef struct {
 
 %token	BINDKEY UNBINDKEY BINDMOUSE UNBINDMOUSE
 %token	FONTNAME STICKY GAP
-%token	AUTOGROUP COMMAND IGNORE
+%token	AUTOGROUP COMMAND IGNORE WM
 %token	YES NO BORDERWIDTH MOVEAMOUNT
 %token	COLOR SNAPDIST
 %token	ACTIVEBORDER INACTIVEBORDER URGENCYBORDER
@@ -116,7 +116,7 @@ main		: FONTNAME STRING		{
 			conf->stickygroups = $2;
 		}
 		| BORDERWIDTH NUMBER {
-			if ($2 < 0 || $2 > UINT_MAX) {
+			if ($2 < 0 || $2 > INT_MAX) {
 				yyerror("invalid borderwidth");
 				YYERROR;
 			}
@@ -137,12 +137,24 @@ main		: FONTNAME STRING		{
 			conf->snapdist = $2;
 		}
 		| COMMAND STRING string		{
-			if (!conf_cmd_add(conf, $2, $3)) {
-				yyerror("command name/path too long");
+			if (strlen($3) >= PATH_MAX) {
+				yyerror("%s command path too long", $2);
 				free($2);
 				free($3);
 				YYERROR;
 			}
+			conf_cmd_add(conf, $2, $3);
+			free($2);
+			free($3);
+		}
+		| WM STRING string	{
+			if (strlen($3) >= PATH_MAX) {
+				yyerror("%s wm path too long", $2);
+				free($2);
+				free($3);
+				YYERROR;
+			}
+			conf_wm_add(conf, $2, $3);
 			free($2);
 			free($3);
 		}
@@ -317,6 +329,7 @@ lookup(char *s)
 		{ "unbind-mouse",	UNBINDMOUSE},
 		{ "ungroupborder",	UNGROUPBORDER},
 		{ "urgencyborder",	URGENCYBORDER},
+		{ "wm",			WM},
 		{ "yes",		YES}
 	};
 	const struct keywords	*p;
@@ -544,19 +557,13 @@ nodigits:
 }
 
 struct file *
-pushfile(const char *name)
+pushfile(const char *name, FILE *stream)
 {
 	struct file	*nfile;
 
 	nfile = xcalloc(1, sizeof(struct file));
 	nfile->name = xstrdup(name);
-
-	if ((nfile->stream = fopen(nfile->name, "r")) == NULL) {
-		warn("%s", nfile->name);
-		free(nfile->name);
-		free(nfile);
-		return (NULL);
-	}
+	nfile->stream = stream;
 	nfile->lineno = 1;
 	TAILQ_INSERT_TAIL(&files, nfile, entry);
 	return (nfile);
@@ -581,13 +588,19 @@ popfile(void)
 int
 parse_config(const char *filename, struct conf *xconf)
 {
+	FILE		*stream;
 	int		 errors = 0;
 
 	conf = xconf;
 
-	if ((file = pushfile(filename)) == NULL) {
+	stream = fopen(filename, "r");
+	if (stream == NULL) {
+		if (errno == ENOENT)
+			return (0);
+		warn("%s", filename);
 		return (-1);
 	}
+	file = pushfile(filename, stream);
 	topfile = file;
 
 	yyparse();

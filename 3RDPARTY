@@ -1,38 +1,38 @@
-# $OpenBSD: 3RDPARTY,v 1.287 2017/02/26 12:35:55 jsg Exp $
+# $OpenBSD: 3RDPARTY,v 1.311 2018/03/29 20:50:18 matthieu Exp $
 #
 Package: 	Freetype
-Version:	2.7.1
-Current Vers:	2.7.1
+Version:	2.8.1
+Current Vers:	2.9
 Maintainer:	Freetype.org
 Archive Site:	http://download.savannah.gnu.org/releases/freetype/
 
 Package:	xterm
-Version:	327
-Current Vers:	327
+Version:	331
+Current Vers:	331
 Maintainer:	Thomas E. Dickey
 Archive Site:	http://invisible-island.net/xterm/xterm.html
 
 Package:	Mesa
-Version		13.0.5
-Current Vers:	17.0.0
+Version		13.0.6
+Current Vers:	18.0.0
 Maintainer:	Brian Paul
 Archive Site:	http://www.mesa3d.org/
 
 Package:	libdrm
-Version:	2.4.75
-Current Vers:	2.4.75
+Version:	2.4.89
+Current Vers:	2.4.91
 Maintainer:	Eric Anholt
 Archive Site:	http://dri.freedesktop.org/
 
 Package:	libepoxy
 Version:	1.3.1
-Current Vers:	1.4.0
+Current Vers:	1.4.3
 Maintainer:	Eric Anholt
 Archive Site:	https://github.com/anholt/libepoxy/releases
 
 Package:	fontconfig
-Version:	2.12.1
-Current Vers:	2.12.1
+Version:	2.12.4
+Current Vers:	2.13.0
 Maintainer:	Akira TAGOH
 Archive Site:	http://www.fontconfig.org/
 
@@ -40,17 +40,17 @@ Package:	DejaVu Fonts
 Version:	2.37
 Current Vers:	2.37
 Maintainer:	Freedesktop.org
-Archive Site:	http://dejavu-fonts.org/
+Archive Site:	https://dejavu-fonts.github.io/
 
 Package:	xlockmore
 Version:	5.22
-Current Vers:	5.50
+Current Vers:	5.55
 Maintainer:	David A. Bagley
 Archive Site:	http://sillycycle.com/xlock/
 
 Package:	xkeyboard-config
 Version:	2.20
-Current Vers:	2.20
+Current Vers:	2.23.1
 Maintainer:	xkb@listserv.bat.ru
 Archive Site:	http://www.freedesktop.org/wiki/Software/XKeyboardConfig
 
@@ -67,6 +67,6 @@ Comment:	Locally forked, newer upstream versions have incompatible
 
 Packge:		xcb-util-xrm
 Version:	1.0
-Current Vers:	1.0
+Current Vers:	1.2
 Maintainer:	Ingo Buerk
 Archive Site:	https://github.com/Airblader/xcb-util-xrm

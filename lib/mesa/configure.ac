@@ -145,7 +145,14 @@ else
     fi
 fi
 
-AM_CONDITIONAL(REGEN_SOURCES, test -n "$PYTHON2")
+dnl Avoid attempting to rebuild files with python and yacc
+AC_ARG_ENABLE([regen-sources],
+   [AS_HELP_STRING([--disable-regen-sources],
+       [disable regenerating source with python and yacc @<:@default=enabled@:>@])],
+   [regen_sources="$enableval"],
+   [regen_sources=yes])
+
+AM_CONDITIONAL(REGEN_SOURCES, test "x$regen_sources" = xyes)
 
 AC_PROG_INSTALL
 
@@ -832,7 +839,7 @@ test -z "$PTHREAD_LIBS" && PTHREAD_LIBS="-lpthread"
 
 dnl pthread-stubs is mandatory on targets where it exists
 case "$host_os" in
-cygwin* )
+cygwin* | openbsd*)
     pthread_stubs_possible="no"
     ;;
 * )
@@ -1978,6 +1985,21 @@ if test "x$enable_opencl" = xyes; then
     if test "x$have_libelf" != xyes; then
        AC_MSG_ERROR([Clover requires libelf])
     fi
+
+    if test "x${ac_cv_cxx_compiler_gnu}" = xyes; then
+        altivec_enabled=no
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+        #if !defined(__VEC__) || !defined(__ALTIVEC__)
+        #error "AltiVec not enabled"
+        #endif
+        ])], altivec_enabled=yes)
+
+        if test "$altivec_enabled" = yes; then
+            CLOVER_STD_OVERRIDE="-std=gnu++11"
+        fi
+        AC_SUBST([CLOVER_STD_OVERRIDE])
+    fi
+
 fi
 AM_CONDITIONAL(HAVE_CLOVER, test "x$enable_opencl" = xyes)
 AM_CONDITIONAL(HAVE_CLOVER_ICD, test "x$enable_opencl_icd" = xyes)

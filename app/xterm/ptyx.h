@@ -1,7 +1,7 @@
-/* $XTermId: ptyx.h,v 1.830 2016/10/07 00:38:57 tom Exp $ */
+/* $XTermId: ptyx.h,v 1.879 2017/12/30 14:42:05 tom Exp $ */
 
 /*
- * Copyright 1999-2015,2016 by Thomas E. Dickey
+ * Copyright 1999-2016,2017 by Thomas E. Dickey
  *
  *                         All Rights Reserved
  *
@@ -80,7 +80,7 @@
 
 #include <stdio.h>
 
-#ifdef HAVE_STDINT_H
+#if defined(HAVE_STDINT_H) || !defined(HAVE_CONFIG_H)
 #include <stdint.h>
 #define DECONST(type,s) ((type *)(intptr_t)(const type *)(s))
 #else
@@ -112,8 +112,8 @@
 #define TypeXtMalloc(type)	TypeXtMallocN(type, 1)
 
 /* use these to allocate partly-structured data */
-#define CastMallocN(type,n)	(type *)malloc(sizeof(type) + (size_t) (n))
-#define CastMalloc(type)	CastMallocN(type,0)
+#define TextAlloc(n)		(char *)malloc(sizeof(char) * (size_t) ((n) + 1))
+#define CastMalloc(type)	(type *)malloc(sizeof(type))
 
 #define BumpBuffer(type, buffer, size, want) \
 	if (want >= size) { \
@@ -397,7 +397,9 @@ typedef struct {
 
 #define TERMCAP_SIZE 1500		/* 1023 is standard; 'screen' exceeds */
 
-#define NMENUFONTS 9			/* font entries in fontMenu */
+#define MAX_XLFD_FONTS	1
+#define MAX_XFT_FONTS	1
+#define NMENUFONTS	9		/* font entries in fontMenu */
 
 #define	NBOX	5			/* Number of Points in box	*/
 #define	NPARAM	30			/* Max. parameters		*/
@@ -613,6 +615,10 @@ typedef struct {
 #define OPT_ISO_COLORS  1 /* true if xterm is configured with ISO colors */
 #endif
 
+#ifndef OPT_DIRECT_COLOR
+#define OPT_DIRECT_COLOR  0 /* true if xterm is configured with direct-colors */
+#endif
+
 #ifndef OPT_256_COLORS
 #define OPT_256_COLORS  0 /* true if xterm is configured with 256 colors */
 #endif
@@ -687,6 +693,10 @@ typedef struct {
 #else
 #define OPT_RENDERWIDE 0
 #endif
+#endif
+
+#ifndef OPT_REPORT_CCLASS
+#define OPT_REPORT_CCLASS  1 /* provide "-report-charclass" option */
 #endif
 
 #ifndef OPT_REPORT_COLORS
@@ -856,9 +866,13 @@ typedef struct {
 typedef enum {
     fNorm = 0			/* normal font */
     , fBold			/* bold font */
+#if OPT_WIDE_ATTRS || OPT_RENDERWIDE
+    , fItal			/* italic font */
+#endif
 #if OPT_WIDE_CHARS
     , fWide			/* double-width font */
     , fWBold			/* double-width bold font */
+    , fWItal			/* double-width italic font */
 #endif
     , fMAX
 } VTFontEnum;
@@ -1008,7 +1022,7 @@ typedef enum {
 
 /*
  * Use this enumerated type to check consistency among dpmodes(), savemodes()
- * restoremodes() and do_decrpm().
+ * restoremodes() and do_dec_rqm().
  */
 typedef enum {
     srm_DECCKM = 1
@@ -1025,6 +1039,8 @@ typedef enum {
 #endif
 #if OPT_BLINK_CURS
     ,srm_ATT610_BLINK = 12
+    ,srm_CURSOR_BLINK_OPS = 13
+    ,srm_XOR_CURSOR_BLINKS = 14
 #endif
     ,srm_DECPFF = 18
     ,srm_DECPEX = 19
@@ -1044,8 +1060,6 @@ typedef enum {
 #ifdef ALLOWLOGGING
     ,srm_ALLOWLOGGING = 46
 #endif
-    ,srm_OPT_ALTBUF_CURSOR = 1049
-    ,srm_OPT_ALTBUF = 1047
     ,srm_ALTBUF = 47
     ,srm_DECNKM = 66
     ,srm_DECBKM = 67
@@ -1081,7 +1095,10 @@ typedef enum {
     ,srm_BELL_IS_URGENT = 1042
     ,srm_POP_ON_BELL = 1043
     ,srm_KEEP_CLIPBOARD = 1044
-    ,srm_TITE_INHIBIT = 1048
+    ,srm_ALLOW_ALTBUF = 1046
+    ,srm_OPT_ALTBUF = 1047
+    ,srm_SAVE_CURSOR = 1048
+    ,srm_OPT_ALTBUF_CURSOR = 1049
 #if OPT_TCAP_FKEYS
     ,srm_TCAP_FKEYS = 1050
 #endif
@@ -1128,6 +1145,16 @@ typedef enum {
     ,NSELECTUNITS
 } SelectUnit;
 
+#if OPT_BLINK_CURS
+typedef enum {
+    cbFalse = 0
+    , cbTrue
+    , cbAlways
+    , cbNever
+    , cbLAST
+} BlinkOps;
+#endif
+
 typedef enum {
     ecSetColor = 1
     , ecGetColor
@@ -1156,6 +1183,21 @@ typedef enum {
     , eiLAST
 } AIconOps;
 #endif
+
+typedef enum {
+    emX10 = 1
+    , emLocator
+    , emVT200Click
+    , emVT200Hilite
+    , emAnyButton
+    , emAnyEvent
+    , emFocusEvent
+    , emExtended
+    , emSGR
+    , emURXVT
+    , emAlternateScroll
+    , emLAST
+} MouseOps;
 
 typedef enum {
     etSetTcap = 1
@@ -1236,6 +1278,8 @@ typedef enum {
 # define NUM_ANSI_COLORS MIN_ANSI_COLORS
 #endif
 
+#define okIndexedColor(n) ((n) >= 0 && (n) < NUM_ANSI_COLORS)
+
 #if NUM_ANSI_COLORS > MIN_ANSI_COLORS
 # define OPT_EXT_COLORS  1
 #else
@@ -1295,6 +1339,14 @@ typedef enum {
 # define if_OPT_ISO_COLORS(screen, code) if (screen->colorMode) code
 #else
 # define if_OPT_ISO_COLORS(screen, code) /* nothing */
+#endif
+
+#if OPT_DIRECT_COLOR
+# define if_OPT_DIRECT_COLOR(screen, code) if (screen->direct_color) code
+# define if_OPT_DIRECT_COLOR2(screen, test, code) if (screen->direct_color && (test)) code
+#else
+# define if_OPT_DIRECT_COLOR(screen, code) /* nothing */
+# define if_OPT_DIRECT_COLOR2(screen, test, code) /* nothing */
 #endif
 
 #define COLOR_RES_NAME(root) "color" root
@@ -1513,36 +1565,79 @@ typedef struct {
 
 /***====================================================================***/
 
+/*
+ * Pixel (and its components) are declared as unsigned long, but even for RGB
+ * we need no more than 32-bits.
+ */
+typedef uint32_t MyPixel;
+typedef int32_t MyColor;
+
 #if OPT_ISO_COLORS
-#if OPT_256_COLORS || OPT_88_COLORS
+#if OPT_DIRECT_COLOR
+typedef struct {
+    MyColor fg;
+    MyColor bg;
+} CellColor;
+
+#define isSameCColor(p,q) (!memcmp(&(p), &(q), sizeof(CellColor)))
+
+#elif OPT_256_COLORS || OPT_88_COLORS
+
 #define COLOR_BITS 8
 typedef unsigned short CellColor;
+
 #else
+
 #define COLOR_BITS 4
 typedef Char CellColor;
+
 #endif
 #else
 typedef unsigned CellColor;
 #endif
 
-#define BITS2MASK(b)          ((1 << b) - 1)
+#define NO_COLOR		((unsigned)-1)
 
-#define COLOR_MASK            BITS2MASK(COLOR_BITS)
+#ifndef isSameCColor
+#define isSameCColor(p,q)	((p) == (q))
+#endif
 
-#define GetCellColorFG(src)   ((src) & COLOR_MASK)
-#define GetCellColorBG(src)   (((src) >> COLOR_BITS) & COLOR_MASK)
+#define BITS2MASK(b)		((1 << b) - 1)
+
+#define COLOR_MASK		BITS2MASK(COLOR_BITS)
+
+#if OPT_DIRECT_COLOR
+#define clrDirectFG(flags)	UIntClr(flags, ATR_DIRECT_FG)
+#define clrDirectBG(flags)	UIntClr(flags, ATR_DIRECT_BG)
+#define GetCellColorFG(data)	((data).fg)
+#define GetCellColorBG(data)	((data).bg)
+#define hasDirectFG(flags)	((flags) & ATR_DIRECT_FG)
+#define hasDirectBG(flags)	((flags) & ATR_DIRECT_BG)
+#define setDirectFG(flags,test)	if (test) UIntSet(flags, ATR_DIRECT_FG); else UIntClr(flags, ATR_DIRECT_BG)
+#define setDirectBG(flags,test)	if (test) UIntSet(flags, ATR_DIRECT_BG); else UIntClr(flags, ATR_DIRECT_BG)
+#else
+#define clrDirectFG(flags)	/* nothing */
+#define clrDirectBG(flags)	/* nothing */
+#define GetCellColorFG(data)	((data) & COLOR_MASK)
+#define GetCellColorBG(data)	(((data) >> COLOR_BITS) & COLOR_MASK)
+#define hasDirectFG(flags)	0
+#define hasDirectBG(flags)	0
+#define setDirectFG(flags,test)	(void)(test)
+#define setDirectBG(flags,test)	(void)(test)
+#endif
+extern CellColor blank_cell_color;
 
 typedef Char RowData;		/* wrap/blink, and DEC single-double chars */
 
-#define LINEFLAG_BITS         4
-#define LINEFLAG_MASK         BITS2MASK(LINEFLAG_BITS)
+#define LINEFLAG_BITS		4
+#define LINEFLAG_MASK		BITS2MASK(LINEFLAG_BITS)
 
-#define GetLineFlags(ld)      ((ld)->bufHead & LINEFLAG_MASK)
+#define GetLineFlags(ld)	((ld)->bufHead & LINEFLAG_MASK)
 
 #if OPT_DEC_CHRSET
-#define SetLineFlags(ld,xx)   (ld)->bufHead = (RowData) ((ld->bufHead & (DBLCS_MASK << LINEFLAG_BITS)) | (xx & LINEFLAG_MASK))
+#define SetLineFlags(ld,xx)	(ld)->bufHead = (RowData) ((ld->bufHead & (DBLCS_MASK << LINEFLAG_BITS)) | (xx & LINEFLAG_MASK))
 #else
-#define SetLineFlags(ld,xx)   (ld)->bufHead = (RowData) (xx & LINEFLAG_MASK)
+#define SetLineFlags(ld,xx)	(ld)->bufHead = (RowData) (xx & LINEFLAG_MASK)
 #endif
 
 typedef IChar CharData;
@@ -1619,9 +1714,16 @@ typedef struct {
 
 #define KNOWN_MISSING	256
 
+typedef enum {
+	fwNever = 0,
+	fwResource,
+	fwAlways
+} fontWarningTypes;
+
 typedef struct {
 	unsigned	chrset;
 	unsigned	flags;
+	fontWarningTypes warn;
 	XFontStruct *	fs;
 	char *		fn;
 	FontMap		map;
@@ -1644,6 +1746,11 @@ typedef struct {
 	XftFont *	font;
 	FontMap		map;
 } XTermXftFonts;
+
+typedef	struct _ListXftFonts {
+	struct _ListXftFonts *next;
+	XftFont *	font;
+} ListXftFonts;
 #endif
 
 typedef struct {
@@ -1655,6 +1762,7 @@ typedef struct {
 
 	/* indices into save_modes[] */
 typedef enum {
+	DP_ALLOW_ALTBUF,
 	DP_ALTERNATE_SCROLL,
 	DP_ALT_SENDS_ESC,
 	DP_BELL_IS_URGENT,
@@ -1685,7 +1793,7 @@ typedef enum {
 	DP_RXVT_SCROLL_TTY_KEYPRESS,
 	DP_RXVT_SCROLL_TTY_OUTPUT,
 	DP_SELECT_TO_CLIPBOARD,
-	DP_X_ALTSCRN,
+	DP_X_ALTBUF,
 	DP_X_DECCOLM,
 	DP_X_EXT_MOUSE,
 	DP_X_LOGGING,
@@ -1731,12 +1839,12 @@ typedef enum {
 
 	/* index into vt_shell[] or tek_shell[] */
 typedef enum {
-	noMenu = -1,
-	mainMenu,
-	vtMenu,
-	fontMenu,
+	noMenu = -1
+	,mainMenu
+	,vtMenu
+	,fontMenu
 #if OPT_TEK4014
-	tekMenu
+	,tekMenu
 #endif
 } MenuIndex;
 
@@ -1797,12 +1905,12 @@ typedef struct {
 	Char		curgl;
 	Char		curgr;
 	int		gsets[4];
+	Boolean		wrap_flag;
 #if OPT_ISO_COLORS
-	int		cur_foreground; /* current foreground color	*/
-	int		cur_background; /* current background color	*/
-	int		sgr_foreground; /* current SGR foreground color */
-	int		sgr_background; /* current SGR background color */
-	Boolean		sgr_extended;	/* SGR set with extended codes? */
+	int		cur_foreground;  /* current foreground color	*/
+	int		cur_background;  /* current background color	*/
+	int		sgr_foreground;  /* current SGR foreground color */
+	int		sgr_background;  /* current SGR background color */
 #endif
 } SavedCursor;
 
@@ -1864,17 +1972,42 @@ typedef struct {
 } TKwin;
 
 typedef struct {
-    String f_n;			/* the normal font */
-    String f_b;			/* the bold font */
+    char *f_n;			/* the normal font */
+    char *f_b;			/* the bold font */
+#if OPT_WIDE_ATTRS
+    char *f_i;			/* italic font (Xft only) */
+#endif
 #if OPT_WIDE_CHARS
-    String f_w;			/* the normal wide font */
-    String f_wb;		/* the bold wide font */
+    char *f_w;			/* the normal wide font */
+    char *f_wb;			/* the bold wide font */
+    char *f_wi;			/* wide italic font (Xft only) */
 #endif
 } VTFontNames;
 
 typedef struct {
+    char **list_n;		/* the normal font */
+    char **list_b;		/* the bold font */
+#if OPT_WIDE_ATTRS || OPT_RENDERWIDE
+    char **list_i;		/* italic font (Xft only) */
+#endif
+#if OPT_WIDE_CHARS
+    char **list_w;		/* the normal wide font */
+    char **list_wb;		/* the bold wide font */
+    char **list_wi;		/* wide italic font (Xft only) */
+#endif
+} VTFontList;
+
+typedef struct {
+    VTFontList x11;
+#if OPT_RENDERFONT
+    VTFontList xft;
+#endif
+} XtermFontNames;
+
+typedef struct {
     VTFontNames default_font;
     String menu_font_names[NMENUFONTS][fMAX];
+    XtermFontNames fonts;
 } SubResourceRec;
 
 #if OPT_INPUT_METHOD
@@ -1911,6 +2044,7 @@ typedef struct {
 	Display		*display;	/* X display for screen		*/
 	int		respond;	/* socket for responses
 					   (position report, etc.)	*/
+	int		nextEventDelay;	/* msecs to delay for x-events  */
 /* These parameters apply to VT100 window */
 	IChar		unparse_bfr[256];
 	unsigned	unparse_len;
@@ -1942,6 +2076,9 @@ typedef struct {
 	Boolean		colorAttrMode;	/* prefer colorUL/BD to SGR	*/
 #if OPT_WIDE_ATTRS
 	Boolean		colorITMode;	/* use color for italics?	*/
+#endif
+#if OPT_DIRECT_COLOR
+	Boolean		direct_color;	/* direct-color enabled?	*/
 #endif
 #endif
 #if OPT_DEC_CHRSET
@@ -1993,7 +2130,9 @@ typedef struct {
 	unsigned	send_mouse_pos;	/* user wants mouse transition  */
 					/* and position information	*/
 	int		extend_coords;	/* support large terminals	*/
+#if OPT_FOCUS_EVENT
 	Boolean		send_focus_pos; /* user wants focus in/out info */
+#endif
 	Boolean		quiet_grab;	/* true if no cursor change on focus */
 #if OPT_PASTE64
 	Cardinal	base64_paste;	/* set to send paste in base64	*/
@@ -2033,9 +2172,14 @@ typedef struct {
 	Boolean		visualbell;	/* visual bell mode		*/
 	Boolean		poponbell;	/* pop on bell mode		*/
 
+	Boolean		eraseSavedLines; /* eraseSavedLines option	*/
+	Boolean		eraseSavedLines0; /* initial eraseSavedLines	*/
+	Boolean		tabCancelsWrap; /* tabCancelsWrap option	*/
+
 	Boolean		allowPasteControls; /* PasteControls mode	*/
 	Boolean		allowColorOps;	/* ColorOps mode		*/
 	Boolean		allowFontOps;	/* FontOps mode			*/
+	Boolean		allowMouseOps;	/* MouseOps mode		*/
 	Boolean		allowSendEvents;/* SendEvent mode		*/
 	Boolean		allowTcapOps;	/* TcapOps mode			*/
 	Boolean		allowTitleOps;	/* TitleOps mode		*/
@@ -2044,6 +2188,7 @@ typedef struct {
 	Boolean		allowPasteControl0; /* PasteControls mode	*/
 	Boolean		allowColorOp0;	/* initial ColorOps mode	*/
 	Boolean		allowFontOp0;	/* initial FontOps mode		*/
+	Boolean		allowMouseOp0;	/* initial MouseOps mode	*/
 	Boolean		allowSendEvent0;/* initial SendEvent mode	*/
 	Boolean		allowTcapOp0;	/* initial TcapOps mode		*/
 	Boolean		allowTitleOp0;	/* initial TitleOps mode	*/
@@ -2054,6 +2199,9 @@ typedef struct {
 
 	String		disallowedFontOps;
 	char		disallow_font_ops[efLAST];
+
+	String		disallowedMouseOps;
+	char		disallow_mouse_ops[emLAST];
 
 	String		disallowedTcapOps;
 	char		disallow_tcap_ops[etLAST];
@@ -2095,10 +2243,11 @@ typedef struct {
 #endif
 
 	Boolean		fnt_prop;	/* true if proportional fonts	*/
-	Boolean		fnt_boxes;	/* true if font has box-chars	*/
+	unsigned	fnt_boxes;	/* 0=no boxes, 1=old, 2=unicode */
 	Boolean		force_packed;	/* true to override proportional */
 #if OPT_BOX_CHARS
 	Boolean		force_box_chars;/* true if we assume no boxchars */
+	Boolean		broken_box_chars;/* true if broken boxchars	*/
 	Boolean		force_all_chars;/* true to outline missing chars */
 	Boolean		assume_all_chars;/* true to allow missing chars */
 	Boolean		allow_packing;	/* true to allow packed-fonts	*/
@@ -2126,9 +2275,10 @@ typedef struct {
 	Boolean		cursor_underline; /* true if cursor is in underline mode */
 	XtCursorShape	cursor_shape;
 #if OPT_BLINK_CURS
-	Boolean		cursor_blink;	/* cursor blink enable		*/
-	Boolean		cursor_blink_res; /* initial cursor blink value	*/
-	Boolean		cursor_blink_esc; /* cursor blink escape-state	*/
+	BlinkOps	cursor_blink;	/* cursor blink enable		*/
+	char *		cursor_blink_s;	/* ...resource cursorBlink	*/
+	int		cursor_blink_esc; /* cursor blink escape-state	*/
+	Boolean		cursor_blink_xor; /* how to merge menu/escapes	*/
 #endif
 #if OPT_BLINK_TEXT
 	Boolean		blink_as_bold;	/* text blink disable		*/
@@ -2168,6 +2318,7 @@ typedef struct {
 	 * Working variables for getLineData().
 	 */
 	size_t		lineExtra;	/* extra space for combining chars */
+	size_t		cellExtra;	/* extra space for combining chars */
 	/*
 	 * Pointer to the current visible buffer.
 	 */
@@ -2397,7 +2548,7 @@ typedef struct {
 	 */
 	Pixmap		menu_item_bitmap;	/* mask for checking items */
 	String		initial_font;
-	String		menu_font_names[NMENUFONTS][fMAX];
+	char *		menu_font_names[NMENUFONTS][fMAX];
 #define MenuFontName(n) menu_font_names[n][fNorm]
 #define EscapeFontName() MenuFontName(fontMenu_fontescape)
 #define SelectFontName() MenuFontName(fontMenu_fontsel)
@@ -2416,6 +2567,7 @@ typedef struct {
 	void *		icon_cgs_cache;
 #endif
 #if OPT_RENDERFONT
+	ListXftFonts	*list_xft_fonts;
 	XTermXftFonts	renderFontNorm[NMENUFONTS];
 	XTermXftFonts	renderFontBold[NMENUFONTS];
 	XTermXftFonts	renderFontItal[NMENUFONTS];
@@ -2510,12 +2662,6 @@ typedef struct {
     const char *name;
     int code;
 } FlagList;
-
-typedef enum {
-    fwNever = 0,
-    fwResource,
-    fwAlways
-} fontWarningTypes;
 
 typedef enum {
     keyboardIsLegacy,		/* bogus vt220 codes for F1-F4, etc. */
@@ -2644,7 +2790,6 @@ typedef struct _Misc {
     Boolean log_on;
 #endif
     Boolean login_shell;
-    Boolean palette_changed;
     Boolean re_verse;
     Boolean re_verse0;		/* initial value of "-rv" */
     XtGravity resizeGravity;
@@ -2672,11 +2817,7 @@ typedef struct _Misc {
     char* input_method;
     char* preedit_type;
     Boolean open_im;		/* true if input-method is opened */
-    Boolean cannot_im;		/* true if we cannot use input-method */
     int retry_im;
-    XFontSet xim_fs;		/* fontset for XIM preedit */
-    int xim_fs_ascent;		/* ascent of fs */
-    TInput inputs[NINPUTWIDGETS];
 #endif
     Boolean dynamicColors;
 #ifndef NO_ACTIVE_ICON
@@ -2698,8 +2839,7 @@ typedef struct _Misc {
     Boolean alwaysUseMods;	/* true if we always want f-key modifiers */
 #endif
 #if OPT_RENDERFONT
-    char *face_name;
-    char *face_wide_name;
+    VTFontNames default_xft;
     float face_size[NMENUFONTS];
     char *render_font_s;
 #endif
@@ -2719,6 +2859,12 @@ typedef struct _Work {
 #ifndef NO_ACTIVE_ICON
     int active_icon;		/* use application icon window  */
 #endif /* NO_ACTIVE_ICON */
+#if OPT_INPUT_METHOD
+    Boolean cannot_im;		/* true if we cannot use input-method */
+    XFontSet xim_fs;		/* fontset for XIM preedit */
+    int xim_fs_ascent;		/* ascent of fs */
+    TInput inputs[NINPUTWIDGETS];
+#endif
 #if OPT_MAXIMIZE
 #define MAX_EWMH_MODE 3
 #define MAX_EWMH_DATA (1 + OPT_TEK4014)
@@ -2733,6 +2879,7 @@ typedef struct _Work {
     unsigned alt_mods;		/* modifier for Alt_L or Alt_R */
     unsigned meta_mods;		/* modifier for Meta_L or Meta_R */
 #endif
+    XtermFontNames fonts;
 #if OPT_RENDERFONT
     Boolean render_font;
 #endif
@@ -2741,6 +2888,8 @@ typedef struct _Work {
     char dabbrev_data[MAX_DABBREV];
 #endif
     ScrnColors *oldColors;
+    Boolean palette_changed;
+    Boolean broken_box_chars;
 } Work;
 
 typedef struct {int foo;} XtermClassPart, TekClassPart;
@@ -2788,6 +2937,8 @@ typedef struct _XtermWidgetRec {
     XSizeHints	hints;
     XVisualInfo *visInfo;
     int		numVisuals;
+    unsigned	rgb_shifts[3];
+    Bool	has_rgb;
     Bool	init_menu;
     TKeyboard	keyboard;	/* terminal keyboard		*/
     TScreen	screen;		/* terminal screen		*/
@@ -2801,7 +2952,6 @@ typedef struct _XtermWidgetRec {
 #if OPT_ISO_COLORS
     int		sgr_foreground; /* current SGR foreground color */
     int		sgr_background; /* current SGR background color */
-    Boolean	sgr_extended;	/* SGR set with extended codes? */
 #endif
     IFlags	initflags;	/* initial mode flags		*/
     Tabs	tabs;		/* tabstops of the terminal	*/
@@ -2812,6 +2962,7 @@ typedef struct _XtermWidgetRec {
 #if OPT_TEK4014
 typedef struct _TekWidgetRec {
     CorePart	core;
+    XtermWidget vt;		/* main widget has border, etc. */
     TekPart	tek;		/* contains resources */
     TekScreen	screen;		/* contains working data (no resources) */
     Bool	init_menu;
@@ -2852,7 +3003,9 @@ typedef struct _TekWidgetRec {
 #define ATR_ITALIC	AttrBIT(9)
 #define ATR_STRIKEOUT	AttrBIT(10)
 #define ATR_DBL_UNDER	AttrBIT(11)
-#define SGR_MASK2       (ATR_FAINT | ATR_ITALIC | ATR_STRIKEOUT | ATR_DBL_UNDER)
+#define ATR_DIRECT_FG	AttrBIT(12)
+#define ATR_DIRECT_BG	AttrBIT(13)
+#define SGR_MASK2       (ATR_FAINT | ATR_ITALIC | ATR_STRIKEOUT | ATR_DBL_UNDER | ATR_DIRECT_FG | ATR_DIRECT_BG)
 #else
 #define SGR_MASK2       0
 #endif
@@ -2972,11 +3125,11 @@ typedef struct _TekWidgetRec {
 #define WhichVWin(screen)	((screen)->whichVwin)
 #define WhichTWin(screen)	((screen)->whichTwin)
 
-#define WhichVFont(screen,name)	(IsIcon(screen) ? (screen)->fnt_icon.fs \
-						: (screen)->name)
-#define FontAscent(screen)	(IsIcon(screen) ? (screen)->fnt_icon.fs->ascent \
+#define WhichVFont(screen,name)	(IsIcon(screen) ? getIconicFont(screen) \
+						: getNormalFont(screen, name))->fs
+#define FontAscent(screen)	(IsIcon(screen) ? getIconicFont(screen)->fs->ascent \
 						: WhichVWin(screen)->f_ascent)
-#define FontDescent(screen)	(IsIcon(screen) ? (screen)->fnt_icon.fs->descent \
+#define FontDescent(screen)	(IsIcon(screen) ? getIconicFont(screen)->fs->descent \
 						: WhichVWin(screen)->f_descent)
 #else /* NO_ACTIVE_ICON */
 
@@ -2985,7 +3138,7 @@ typedef struct _TekWidgetRec {
 #define WhichVWin(screen)	(&((screen)->fullVwin))
 #define WhichTWin(screen)	(&((screen)->fullTwin))
 
-#define WhichVFont(screen,name)	((screen)->name)
+#define WhichVFont(screen,name)	getNormalFont(screen, (int)(name))->fs
 #define FontAscent(screen)	WhichVWin(screen)->f_ascent
 #define FontDescent(screen)	WhichVWin(screen)->f_descent
 
@@ -3019,12 +3172,12 @@ typedef struct _TekWidgetRec {
 #define FontWidth(screen)	WhichVWin(screen)->f_width
 #define FontHeight(screen)	WhichVWin(screen)->f_height
 
-#define NormalFont(screen)	WhichVFont(screen, fnts[fNorm].fs)
-#define BoldFont(screen)	WhichVFont(screen, fnts[fBold].fs)
+#define NormalFont(screen)	WhichVFont(screen, fNorm)
+#define BoldFont(screen)	WhichVFont(screen, fBold)
 
 #if OPT_WIDE_CHARS
-#define NormalWFont(screen)	WhichVFont(screen, fnts[fWide].fs)
-#define BoldWFont(screen)	WhichVFont(screen, fnts[fWBold].fs)
+#define NormalWFont(screen)	WhichVFont(screen, fWide)
+#define BoldWFont(screen)	WhichVFont(screen, fWBold)
 #endif
 
 #define ScrollbarWidth(screen)	WhichVWin(screen)->sb_info.width
@@ -3040,6 +3193,10 @@ typedef struct _TekWidgetRec {
 #define TFullHeight(screen)	WhichTWin(screen)->fullheight
 #define TekScale(screen)	WhichTWin(screen)->tekscale
 
+/* use these before tek4014 is realized, good enough for default "9x15" font */
+#define TDefaultRows		37
+#define TDefaultCols		75
+
 #define BorderWidth(w)		((w)->core.border_width)
 #define BorderPixel(w)		((w)->core.border_pixel)
 
@@ -3050,6 +3207,9 @@ typedef struct _TekWidgetRec {
 
 #define AllowFontOps(w,name)	(AllowXtermOps(w, allowFontOps) || \
 				 !TScreenOf(w)->disallow_font_ops[name])
+
+#define AllowMouseOps(w,name)	(AllowXtermOps(w, allowMouseOps) || \
+				 !TScreenOf(w)->disallow_mouse_ops[name])
 
 #define AllowTcapOps(w,name)	(AllowXtermOps(w, allowTcapOps) || \
 				 !TScreenOf(w)->disallow_tcap_ops[name])
